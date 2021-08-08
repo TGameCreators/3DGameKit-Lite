@@ -13,7 +13,7 @@ public class PlayerInput : MonoBehaviour
 
     protected static PlayerInput s_Instance;
 
-    [HideInInspector]
+    [HideInInspector,Tooltip("trueの時入力を受付ない")]
     public bool playerControllerInputBlocked;
 
     protected Vector2 m_Movement;

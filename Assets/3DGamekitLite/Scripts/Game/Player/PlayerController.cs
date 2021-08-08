@@ -13,18 +13,27 @@ namespace Gamekit3D
         public static PlayerController instance { get { return s_Instance; } }
 
         public bool respawning { get { return m_Respawning; } }
+        [Tooltip("How fast Ellen can run.エレンがどれだけ速く走れるか。")]
+        public float maxForwardSpeed = 8f;
+        [Tooltip("How fast Ellen accelerates downwards when airborne.エレンが空中で下方向に加速する速さ。")]
+        public float gravity = 20f;
+        [Tooltip("How fast Ellen takes off when jumping.エレンがジャンプするときの離陸速度。")]
+        public float jumpSpeed = 10f;
+        [Tooltip("How fast Ellen turns when moving at maximum speed.エレンが最大速度で動いたときの回転の速さ。")]
+        public float minTurnSpeed = 400f;
+        [Tooltip("How fast Ellen turns when stationary. エレンが静止しているときの回転の速さ")]
+        public float maxTurnSpeed = 1200f;
+        [Tooltip("How long before Ellen starts considering random idles.エレンはどのくらいでランダムアイドリングを考えるようになるのか。")]
+        public float idleTimeout = 5f;
+        [Tooltip("Whether or not Ellen can swing her staff.エレンがスタッフを振り回せるかどうか。")]
+        public bool canAttack;
 
-        public float maxForwardSpeed = 8f;        // How fast Ellen can run.エレンがどれだけ速く走れるか。
-        public float gravity = 20f;               // How fast Ellen accelerates downwards when airborne.エレンが空中で下方向に加速する速さ。
-        public float jumpSpeed = 10f;             // How fast Ellen takes off when jumping.エレンがジャンプするときの離陸速度。
-        public float minTurnSpeed = 400f;         // How fast Ellen turns when moving at maximum speed.エレンが最大速度で動いたときの回転の速さ。
-        public float maxTurnSpeed = 1200f;        // How fast Ellen turns when stationary. エレンが静止しているときの回転の速さ
-        public float idleTimeout = 5f;            // How long before Ellen starts considering random idles.エレンはどのくらいでランダムアイドリングを考えるようになるのか。
-        public bool canAttack;                    // Whether or not Ellen can swing her staff.エレンがスタッフを振り回せるかどうか。
-
-        public CameraSettings cameraSettings;            // Reference used to determine the camera's direction.カメラの方向を決めるための基準。
-        public MeleeWeapon meleeWeapon;                  // Reference used to (de)activate the staff when attacking. 攻撃時にスタッフを（ディ）アクティブにするための参考資料。
-        public RandomAudioPlayer footstepPlayer;         // Random Audio Players used for various situations.様々な場面で使われるランダムオーディオプレーヤー。
+        [Tooltip("Reference used to determine the camera's direction.カメラの方向を決めるための基準。")]
+        public CameraSettings cameraSettings;
+        [Tooltip("Reference used to (de)activate the staff when attacking. 攻撃時にスタッフを（ディ）アクティブにするための参考資料。")]
+        public MeleeWeapon meleeWeapon;
+        [Tooltip("Random Audio Players used for various situations.様々な場面で使われるランダムオーディオプレーヤー。")]
+        public RandomAudioPlayer footstepPlayer;
         public RandomAudioPlayer hurtAudioPlayer;
         public RandomAudioPlayer landingPlayer;
         public RandomAudioPlayer emoteLandingPlayer;
@@ -32,32 +41,101 @@ namespace Gamekit3D
         public RandomAudioPlayer emoteAttackPlayer;
         public RandomAudioPlayer emoteJumpPlayer;
 
-        protected AnimatorStateInfo m_CurrentStateInfo;    // Information about the base layer of the animator cached.アニメーターのベースレイヤーの情報がキャッシュされています。
+        /// <summary>
+        /// Information about the base layer of the animator cached.アニメーターのベースレイヤーの情報がキャッシュされています。
+        /// </summary>
+        protected AnimatorStateInfo m_CurrentStateInfo;
         protected AnimatorStateInfo m_NextStateInfo;
+        /// <summary>
+        /// Returns true if there is a transition on the given layer, false otherwise.与えられたレイヤーにトランジションがある場合はtrueを、そうでない場合はfalseを返します。
+        /// </summary>
         protected bool m_IsAnimatorTransitioning;
-        protected AnimatorStateInfo m_PreviousCurrentStateInfo;    // Information about the base layer of the animator from last frame.最後のフレームからのアニメーターのベースレイヤーの情報。
+        /// <summary>
+        /// Information about the base layer of the animator from last frame.最後のフレームからのアニメーターのベースレイヤーの情報。
+        /// </summary>
+        protected AnimatorStateInfo m_PreviousCurrentStateInfo;
         protected AnimatorStateInfo m_PreviousNextStateInfo;
         protected bool m_PreviousIsAnimatorTransitioning;
-        protected bool m_IsGrounded = true;            // Whether or not Ellen is currently standing on the ground.エレンが現在地面に立っているかどうか。
-        protected bool m_PreviouslyGrounded = true;    // Whether or not Ellen was standing on the ground last frame.最後のフレームでエレンが地面に立っていたかどうか。
-        protected bool m_ReadyToJump;                  // Whether or not the input state and Ellen are correct to allow jumping.入力の状態とエレンがジャンプを許可するために正しいかどうか。
-        protected float m_DesiredForwardSpeed;         // How fast Ellen aims be going along the ground based on input.入力された情報をもとに、エレンがどのくらいの速度で地上を目指すのか。
-        protected float m_ForwardSpeed;                // How fast Ellen is currently going along the ground.現在、エレンが地面に沿ってどのくらいの速さで進んでいるのか。
-        protected float m_VerticalSpeed;               // How fast Ellen is currently moving up or down.エレンが現在どのくらいの速さで上下に動いているか。
-        protected PlayerInput m_Input;                 // Reference used to determine how Ellen should move.エレンがどのように動くべきかを判断するための基準。
-        protected CharacterController m_CharCtrl;      // Reference used to actually move Ellen.実際にエレンを動かしていたリファレンス
-        protected Animator m_Animator;                 // Reference used to make decisions based on Ellen's current animation and to set parameters.エレンの現在のアニメーションを見て判断し、パラメータを設定するための参考資料。
-        protected Material m_CurrentWalkingSurface;    // Reference used to make decisions about audio.オーディオに関する決定を行うための基準。
-        protected Quaternion m_TargetRotation;         // What rotation Ellen is aiming to have based on input.入力された内容に基づいて、エレンがどのような回転を目指しているのか。
-        protected float m_AngleDiff;                   // Angle in degrees between Ellen's current rotation and her target rotation.エレンの現在の回転と目標の回転の間の角度（度）。
-        protected Collider[] m_OverlapResult = new Collider[8];    // Used to cache colliders that are near Ellen.エレンの近くにあるコリダーをキャッシュするために使用される。
-        protected bool m_InAttack;                     // Whether Ellen is currently in the middle of a melee attack.エレンが現在、近接攻撃の最中であるかどうか。
-        protected bool m_InCombo;                      // Whether Ellen is currently in the middle of her melee combo.エレンが現在、近接コンボの最中であるかどうか。
-        protected Damageable m_Damageable;             // Reference used to set invulnerablity and health based on respawning.リスポーン時の無敵度やヘルスを設定する際に使用されるリファレンスです。
-        protected Renderer[] m_Renderers;              // References used to make sure Renderers are reset properly. レンダラが正しくリセットされていることを確認するために使用されるリファレンス。
-        protected Checkpoint m_CurrentCheckpoint;      // Reference used to reset Ellen to the correct position on respawn.リスポーン時にエレンを正しい位置に戻すために使用されるリファレンス。
-        protected bool m_Respawning;                   // Whether Ellen is currently respawning.エレンが現在リスポーンしているかどうか。
-        protected float m_IdleTimer;                   // Used to count up to Ellen considering a random idle.ランダムなアイドリングを考慮して、エレンまでカウントアップするために使用します。
+        /// <summary>
+        /// Whether or not Ellen is currently standing on the ground.エレンが現在地面に立っているかどうか。
+        /// </summary>
+        protected bool m_IsGrounded = true;
+        /// <summary>
+        /// Whether or not Ellen was standing on the ground last frame.最後のフレームでエレンが地面に立っていたかどうか。
+        /// </summary>
+        protected bool m_PreviouslyGrounded = true;
+        /// <summary>
+        /// Whether or not the input state and Ellen are correct to allow jumping.入力の状態とエレンがジャンプを許可するために正しいかどうか。
+        /// </summary>
+        protected bool m_ReadyToJump;
+        /// <summary>
+        /// How fast Ellen aims be going along the ground based on input.入力された情報をもとに、エレンがどのくらいの速度で地上を目指すのか。
+        /// </summary>
+        protected float m_DesiredForwardSpeed;
+        /// <summary>
+        /// How fast Ellen is currently going along the ground.現在、エレンが地面に沿ってどのくらいの速さで進んでいるのか。
+        /// </summary>
+        protected float m_ForwardSpeed;
+        /// <summary>
+        /// How fast Ellen is currently moving up or down.エレンが現在どのくらいの速さで上下に動いているか。
+        /// </summary>
+        protected float m_VerticalSpeed;
+        /// <summary>
+        /// Reference used to determine how Ellen should move.エレンがどのように動くべきかを判断するための基準。
+        /// </summary>
+        protected PlayerInput m_Input;
+        /// <summary>
+        /// Reference used to actually move Ellen.実際にエレンを動かしていたリファレンス
+        /// </summary>
+        protected CharacterController m_CharCtrl;
+        /// <summary>
+        /// Reference used to make decisions based on Ellen's current animation and to set parameters.エレンの現在のアニメーションを見て判断し、パラメータを設定するための参考資料。
+        /// </summary>
+        protected Animator m_Animator;
+        /// <summary>
+        /// Reference used to make decisions about audio.オーディオに関する決定を行うための基準。
+        /// </summary>
+        protected Material m_CurrentWalkingSurface;
+        /// <summary>
+        /// What rotation Ellen is aiming to have based on input.入力された内容に基づいて、エレンがどのような回転を目指しているのか。
+        /// </summary>
+        protected Quaternion m_TargetRotation;
+        /// <summary>
+        /// Angle in degrees between Ellen's current rotation and her target rotation.エレンの現在の回転と目標の回転の間の角度。
+        /// </summary>
+        protected float m_AngleDiff;
+        /// <summary>
+        /// Used to cache colliders that are near Ellen.エレンの近くにあるコリダーをキャッシュするために使用される。
+        /// </summary>
+        protected Collider[] m_OverlapResult = new Collider[8];
+        /// <summary>
+        /// Whether Ellen is currently in the middle of a melee attack.エレンが現在、近接攻撃の最中であるかどうか。
+        /// </summary>
+        protected bool m_InAttack;
+        /// <summary>
+        /// Whether Ellen is currently in the middle of her melee combo.エレンが現在、近接コンボの最中であるかどうか。
+        /// </summary>
+        protected bool m_InCombo;
+        /// <summary>
+        /// Reference used to set invulnerablity and health based on respawning.リスポーン時の無敵度やヘルスを設定する際に使用されるリファレンスです。
+        /// </summary>
+        protected Damageable m_Damageable;
+        /// <summary>
+        /// References used to make sure Renderers are reset properly. レンダラが正しくリセットされていることを確認するために使用されるリファレンス。
+        /// </summary>
+        protected Renderer[] m_Renderers;
+        /// <summary>
+        /// Reference used to reset Ellen to the correct position on respawn.リスポーン時にエレンを正しい位置に戻すために使用されるリファレンス。
+        /// </summary>
+        protected Checkpoint m_CurrentCheckpoint;
+        /// <summary>
+        /// Whether Ellen is currently respawning.エレンが現在リスポーンしているかどうか。
+        /// </summary>
+        protected bool m_Respawning;
+        /// <summary>
+        /// Used to count up to Ellen considering a random idle.ランダムなアイドリングを考慮して、エレンまでカウントアップするために使用します。
+        /// </summary>
+        protected float m_IdleTimer;
 
         // These constants are used to ensure Ellen moves and behaves properly.これらの定数は、Ellenの動きや動作を適切にするために使用されます。
         // It is advised you don't change them without fully understanding what they do in code.コード上の役割を十分に理解せずに変更することはお勧めしません。
@@ -71,7 +149,6 @@ namespace Gamekit3D
         const float k_GroundDeceleration = 25f;
 
         // Parameters
-
         readonly int m_HashAirborneVerticalSpeed = Animator.StringToHash("AirborneVerticalSpeed");
         readonly int m_HashForwardSpeed = Animator.StringToHash("ForwardSpeed");
         readonly int m_HashAngleDeltaRad = Animator.StringToHash("AngleDeltaRad");
@@ -97,9 +174,15 @@ namespace Gamekit3D
         readonly int m_HashEllenCombo4 = Animator.StringToHash("EllenCombo4");
         readonly int m_HashEllenDeath = Animator.StringToHash("EllenDeath");
 
-        // Tags
+        /// <summary>
+        /// Tags  アニメーションにタグを付けて管理できる
+        /// </summary>
         readonly int m_HashBlockInput = Animator.StringToHash("BlockInput");
+        //https://gametukurikata.com/animationanimator/animatorstatetag
 
+        /// <summary>
+        /// 移動があるか
+        /// </summary>
         protected bool IsMoveInput
         {
             get { return !Mathf.Approximately(m_Input.MoveInput.sqrMagnitude, 0f); }
@@ -242,7 +325,7 @@ namespace Gamekit3D
         /// Called after the animator state has been cached to determine whether or not the staff should be active or not.
         /// アニメーターの状態がキャッシュされた後に呼び出され、スタッフがアクティブであるべきかどうかを判断します。
         /// </summary>
-        /// <returns></returns>
+        /// <returns>スタッフの非/表示</returns>
         bool IsWeaponEquiped()
         {
             bool equipped = m_NextStateInfo.shortNameHash == m_HashEllenCombo1 || m_CurrentStateInfo.shortNameHash == m_HashEllenCombo1;
@@ -269,8 +352,8 @@ namespace Gamekit3D
         }
 
         /// <summary>
-        ///  Called each physics step.
-        ///   物理学のステップごとに呼び出される。
+        ///  Called each physics step.物理学のステップごとに呼び出される。
+        ///   前方向の速度の算出
         /// </summary>
         void CalculateForwardMovement()
         {
@@ -439,10 +522,10 @@ namespace Gamekit3D
 
             // Find the difference between the current rotation of the player and the desired rotation of the player in radians.
             //プレーヤーの現在の回転と、プレーヤーの希望する回転の差をラジアンで求めます。
-            float angleCurrent = Mathf.Atan2(transform.forward.x, transform.forward.z) * Mathf.Rad2Deg;
+            float currentAngle = Mathf.Atan2(transform.forward.x, transform.forward.z) * Mathf.Rad2Deg;
             float targetAngle = Mathf.Atan2(resultingForward.x, resultingForward.z) * Mathf.Rad2Deg;
 
-            m_AngleDiff = Mathf.DeltaAngle(angleCurrent, targetAngle);
+            m_AngleDiff = Mathf.DeltaAngle(currentAngle, targetAngle);
             m_TargetRotation = targetRotation;
         }
 
@@ -602,7 +685,7 @@ namespace Gamekit3D
             m_CharCtrl.transform.rotation *= m_Animator.deltaRotation;
 
             // Add to the movement with the calculated vertical speed.
-            //Add to the movement with the calculated vertical speed.
+            //計算された垂直方向のスピードで動きを加えていきます。
             movement += m_VerticalSpeed * Vector3.up * Time.deltaTime;
 
             // Move the character controller.キャラクターコントローラーを動かす。
