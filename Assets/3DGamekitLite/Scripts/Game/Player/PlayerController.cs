@@ -563,25 +563,29 @@ namespace Gamekit3D
         {
             Vector3 movement;
 
-            // If Ellen is on the ground...
+            // If Ellen is on the ground...エレンが地上にいたら...。 
             if (m_IsGrounded)
             {
-                // ... raycast into the ground...
+                // ... raycast into the ground... ......地面にレイキャストする......。
                 RaycastHit hit;
                 Ray ray = new Ray(transform.position + Vector3.up * k_GroundedRayDistance * 0.5f, -Vector3.up);
                 if (Physics.Raycast(ray, out hit, k_GroundedRayDistance, Physics.AllLayers, QueryTriggerInteraction.Ignore))
                 {
                     // ... and get the movement of the root motion rotated to lie along the plane of the ground.
+                    //...そして、根元の動きを地面の平面に沿って回転させた動きを得る。
                     movement = Vector3.ProjectOnPlane(m_Animator.deltaPosition, hit.normal);
-                    
+
                     // Also store the current walking surface so the correct audio is played.
+                    //また、正しい音声が再生されるように、現在の歩行面を保存します。
                     Renderer groundRenderer = hit.collider.GetComponentInChildren<Renderer>();
                     m_CurrentWalkingSurface = groundRenderer ? groundRenderer.sharedMaterial : null;
                 }
                 else
                 {
                     // If no ground is hit just get the movement as the root motion.
+                    //地面に当たっていない場合は、その動きをルートモーションとして取得します。
                     // Theoretically this should rarely happen as when grounded the ray should always hit.
+                    //理論的には、接地していれば光線は必ず当たるはずなので、このようなことはほとんど起こらないはずです。
                     movement = m_Animator.deltaPosition;
                     m_CurrentWalkingSurface = null;
                 }
@@ -589,52 +593,73 @@ namespace Gamekit3D
             else
             {
                 // If not grounded the movement is just in the forward direction.
+                //接地していなければ、動きはただの前進方向です。
                 movement = m_ForwardSpeed * transform.forward * Time.deltaTime;
             }
 
             // Rotate the transform of the character controller by the animation's root rotation.
+            //キャラクターコントローラのトランスフォームをアニメーションのルートローテーションで回転させます。
             m_CharCtrl.transform.rotation *= m_Animator.deltaRotation;
 
             // Add to the movement with the calculated vertical speed.
+            //Add to the movement with the calculated vertical speed.
             movement += m_VerticalSpeed * Vector3.up * Time.deltaTime;
 
-            // Move the character controller.
+            // Move the character controller.キャラクターコントローラーを動かす。
             m_CharCtrl.Move(movement);
 
             // After the movement store whether or not the character controller is grounded.
+            //動きの後に、キャラクターコントローラーが接地しているかどうかを記憶します。
             m_IsGrounded = m_CharCtrl.isGrounded;
 
             // If Ellen is not on the ground then send the vertical speed to the animator.
+            //エレンが地面にいない場合は、垂直方向の速度をアニメーターに送ります。
             // This is so the vertical speed is kept when landing so the correct landing animation is played.
+            //これは、着陸時に垂直方向の速度を維持し、正しい着陸アニメーションを再生するためです。
             if (!m_IsGrounded)
                 m_Animator.SetFloat(m_HashAirborneVerticalSpeed, m_VerticalSpeed);
 
             // Send whether or not Ellen is on the ground to the animator.
+            // エレンが地上にいるかどうかをアニメーターに送る。
             m_Animator.SetBool(m_HashGrounded, m_IsGrounded);
         }
-        
-        // This is called by an animation event when Ellen swings her staff.
+
+        /// <summary>
+        /// This is called by an animation event when Ellen swings her staff.
+        /// エレンが杖を振るときのアニメーションイベントで呼び出されます。
+        /// </summary>
+        /// <param name="throwing"></param>
         public void MeleeAttackStart(int throwing = 0)
         {
             meleeWeapon.BeginAttack(throwing != 0);
             m_InAttack = true;
         }
 
-        // This is called by an animation event when Ellen finishes swinging her staff.
+        /// <summary>
+        ///  This is called by an animation event when Ellen finishes swinging her staff.
+        /// これは、エレンが杖を振り終わったときにアニメーションイベントで呼び出されます。
+        /// </summary>
         public void MeleeAttackEnd()
         {
             meleeWeapon.EndAttack();
             m_InAttack = false;
         }
 
-        // This is called by Checkpoints to make sure Ellen respawns correctly.
+        /// <summary>
+        ///  This is called by Checkpoints to make sure Ellen respawns correctly.
+        /// これはエレンのリスポーンが正しく行われているかどうかを確認するためにチェックポイントで呼び出されます。
+        /// </summary>
+        /// <param name="checkpoint"></param>
         public void SetCheckpoint(Checkpoint checkpoint)
         {
             if (checkpoint != null)
                 m_CurrentCheckpoint = checkpoint;
         }
 
-        // This is usually called by a state machine behaviour on the animator controller but can be called from anywhere.
+        /// <summary>
+        ///  This is usually called by a state machine behaviour on the animator controller but can be called from anywhere.
+        /// これは通常、アニメーターコントローラーのステートマシンビヘイビアから呼び出されますが、どこからでも呼び出すことができます。
+        /// </summary>
         public void Respawn()
         {
             StartCoroutine(RespawnRoutine());
@@ -643,23 +668,25 @@ namespace Gamekit3D
         protected IEnumerator RespawnRoutine()
         {
             // Wait for the animator to be transitioning from the EllenDeath state.
+            //アニメーターがEllenDeathの状態から移行するのを待ちます。
             while (m_CurrentStateInfo.shortNameHash != m_HashEllenDeath || !m_IsAnimatorTransitioning)
             {
                 yield return null;
             }
-            
-            // Wait for the screen to fade out.
+
+            // Wait for the screen to fade out. 画面がフェードアウトするのを待ちます。
             yield return StartCoroutine(ScreenFader.FadeSceneOut());
             while (ScreenFader.IsFading)
             {
                 yield return null;
             }
 
-            // Enable spawning.
+            // Enable spawning.スポーニングを有効にする。
             EllenSpawn spawn = GetComponentInChildren<EllenSpawn>();
             spawn.enabled = true;
 
             // If there is a checkpoint, move Ellen to it.
+            // チェックポイントがあれば、そこにエレンを移動させる。
             if (m_CurrentCheckpoint != null)
             {
                 transform.position = m_CurrentCheckpoint.transform.position;
@@ -667,32 +694,46 @@ namespace Gamekit3D
             }
             else
             {
-                Debug.LogError("There is no Checkpoint set, there should always be a checkpoint set. Did you add a checkpoint at the spawn?");
+                Debug.LogError("There is no Checkpoint set, there should always be a checkpoint set. Did you add a checkpoint at the spawn?" +
+                    "：チェックポイントが設定されていませんが、常にチェックポイントが設定されているはずです。スポーンでチェックポイントを追加しましたか？");
             }
-            
+
             // Set the Respawn parameter of the animator.
+            //アニメーターのRespawnパラメータを設定します。
             m_Animator.SetTrigger(m_HashRespawn);
-            
+
             // Start the respawn graphic effects.
+            //リスポーンのグラフィック効果を開始します。
             spawn.StartEffect();
-            
-            // Wait for the screen to fade in.
+
+            // Wait for the screen to fade in.画面がフェードインするのを待ちます。
             // Currently it is not important to yield here but should some changes occur that require waiting until a respawn has finished this will be required.
+            //現在は、ここでの降伏は重要ではありませんが、何らかの変更があって、リスポーンが終了するまで待つ必要がある場合には、この降伏が必要になります。
             yield return StartCoroutine(ScreenFader.FadeSceneIn());
             
             m_Damageable.ResetDamage();
         }
 
-        // Called by a state machine behaviour on Ellen's animator controller.
+        /// <summary>
+        ///  Called by a state machine behaviour on Ellen's animator controller.
+        ///   エレンのアニメーターコントローラーのステートマシンビヘイビアから呼び出されます。
+        /// </summary>
         public void RespawnFinished()
         {
             m_Respawning = false;
-            
+
             //we set the damageable invincible so we can't get hurt just after being respawned (feel like a double punitive)
+            //リスポーン直後にダメージを受けないように、ダメージを受けやすいものを無敵にしました。
             m_Damageable.isInvulnerable = false;
         }
 
-        // Called by Ellen's Damageable when she is hurt.
+        /// <summary>
+        ///  Called by Ellen's Damageable when she is hurt.
+        ///   エレンが傷ついたときに、エレンのDamageableで呼ばれる。
+        /// </summary>
+        /// <param name="type"></param>
+        /// <param name="sender"></param>
+        /// <param name="data"></param>
         public void OnReceiveMessage(MessageType type, object sender, object data)
         {
             switch (type)
@@ -712,33 +753,44 @@ namespace Gamekit3D
             }
         }
 
-        // Called by OnReceiveMessage.
+        /// <summary>
+        ///  Called by OnReceiveMessage.
+        ///   OnReceiveMessageによって呼び出されます。
+        /// </summary>
+        /// <param name="damageMessage"></param>
         void Damaged(Damageable.DamageMessage damageMessage)
         {
             // Set the Hurt parameter of the animator.
+            //アニメーターのHurtパラメータを設定します。
             m_Animator.SetTrigger(m_HashHurt);
 
             // Find the direction of the damage.
+            //ダメージの方向を見つける。
             Vector3 forward = damageMessage.damageSource - transform.position;
             forward.y = 0f;
 
             Vector3 localHurt = transform.InverseTransformDirection(forward);
 
             // Set the HurtFromX and HurtFromY parameters of the animator based on the direction of the damage.
+            //ダメージの方向に応じて、アニメーターのHurtFromXとHurtFromYのパラメータを設定します。
             m_Animator.SetFloat(m_HashHurtFromX, localHurt.x);
             m_Animator.SetFloat(m_HashHurtFromY, localHurt.z);
 
-            // Shake the camera.
+            // Shake the camera.カメラを振る。
             CameraShake.Shake(CameraShake.k_PlayerHitShakeAmount, CameraShake.k_PlayerHitShakeTime);
 
-            // Play an audio clip of being hurt.
+            // Play an audio clip of being hurt. 怪我をしたときの音声を再生する。
             if (hurtAudioPlayer != null)
             {
                 hurtAudioPlayer.PlayRandomClip();
             }
         }
 
-        // Called by OnReceiveMessage and by DeathVolumes in the scene.
+        /// <summary>
+        ///  Called by OnReceiveMessage and by DeathVolumes in the scene.
+        ///   OnReceiveMessageとシーン内のDeathVolumesによって呼び出されます。
+        /// </summary>
+        /// <param name="damageMessage"></param>
         public void Die(Damageable.DamageMessage damageMessage)
         {
             m_Animator.SetTrigger(m_HashDeath);
