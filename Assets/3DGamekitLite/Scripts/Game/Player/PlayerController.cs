@@ -419,7 +419,7 @@ namespace Gamekit3D
                 }
 
                 // If a jump is approximately peaking, make it absolute.
-                //ジャンプがおよそピーキングであれば、絶対的なものにします。
+                //ジャンプがおよそピークであれば、絶対的なものにします。
                 if (Mathf.Approximately(m_VerticalSpeed, 0f))
                 {
                     m_VerticalSpeed = 0f;
