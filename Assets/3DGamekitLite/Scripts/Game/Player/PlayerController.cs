@@ -656,7 +656,8 @@ namespace Gamekit3D
                 {
                     // ... and get the movement of the root motion rotated to lie along the plane of the ground.
                     //...そして、根元の動きを地面の平面に沿って回転させた動きを得る。
-                    movement = Vector3.ProjectOnPlane(m_Animator.deltaPosition, hit.normal);
+                    movement = Vector3.ProjectOnPlane(m_Animator.deltaPosition, hit.normal);//ベクトルを、平面に直交する法線で定義される平面に投影します。
+                    //return ベクトルの平面上の位置。
 
                     // Also store the current walking surface so the correct audio is played.
                     //また、正しい音声が再生されるように、現在の歩行面を保存します。
